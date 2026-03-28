@@ -1,6 +1,6 @@
 use rand::Rng;
-use std::io::{self, Write};
-use std::fs::OpenOptions;
+use std::io::{self, Write, BufRead, BufReader};
+use std::fs::{OpenOptions, File};
 use std::collections::HashMap;
 
 fn create_password(name: String) {
@@ -36,6 +36,57 @@ fn create_password(name: String) {
     file.write_all(content.as_bytes()).expect("Failed to write to file!");
 }
 
+fn view_password() -> io::Result<()> {
+    let file = File::open("passwords.txt").expect("Failed to open file!"); // Opening the file
+    let reader = BufReader::new(file); // Reading from the file
+
+    for line in reader.lines() {
+        let line = line?;
+        println!("{}", line);
+    }
+
+    Ok(())
+}
+
+fn update_password(label: String) {
+    let file = File::open("passwords.txt").expect("Failed to open file!");
+    let reader = BufReader::new(file);
+
+    let mut data: HashMap<String, String> = HashMap::new();
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        let parts: Vec<&str> = line.split(':').collect();
+        data.insert(parts[0].to_string(), parts[1].to_string());
+    }
+
+    match data.get(&label) {
+        Some(_) => {
+            let mut new_password = String::new();
+            print!("Enter the new password: ");
+            io::stdout().flush().expect("Flush failed!");
+            io::stdin()
+                .read_line(&mut new_password)
+                .unwrap();
+            data.insert(label, new_password.trim().to_string());
+
+            let mut content = String::new();
+            for (key, value) in &data {
+                content.push_str(&format!("{}:{}\n", key, value));
+            }
+
+            let mut file = OpenOptions::new()
+                .write(true)
+                .open("passwords.txt")
+                .expect("Failed to open file");
+
+            file.write_all(content.as_bytes()).expect("Failed to write to file!");
+            println!("Password updated successfully!");
+        },
+        None => println!("Not found!"),
+    }
+}
+
 fn main() {
     let mut input = String::new();
 
@@ -61,8 +112,17 @@ fn main() {
                 .expect("Failed to read label!");
             create_password(label.trim().to_string());
         }
-        '2' => println!("Password viewed!"),
-        '3' => println!("Password updated!"),
+        '2' => view_password().expect("Failed to view passwords"),
+        '3' => {
+            let mut label = String::new();
+            print!("Enter a label of the password to change: ");
+            io::stdout().flush().expect("Flush failed!");
+            io::stdin()
+                .read_line(&mut label)
+                .unwrap();
+
+            update_password(label.trim().to_string());
+        }
         '4' => println!("Password deleted!"),
         _ => println!("Invalid choice"),
     }
