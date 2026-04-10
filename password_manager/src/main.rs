@@ -87,43 +87,90 @@ fn update_password(label: String) {
     }
 }
 
+fn delete_password() {
+    let file = File::open("passwords.txt").expect("Failed to open file!");
+    let reader = BufReader::new(file);
+
+    let mut data: HashMap<String, String> = HashMap::new();
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        let parts: Vec<&str> = line.split(':').collect();
+        data.insert(parts[0].to_string(), parts[1].to_string());
+    }
+
+    let mut label = String::new();
+    print!("Enter the label of the password to delete: ");
+    io::stdout().flush().expect("Flush failed!");
+    io::stdin()
+        .read_line(&mut label)
+        .unwrap();
+
+    match data.remove(label.trim()) {
+        Some(_) => {
+            let mut content = String::new();
+            for (key, value) in &data {
+                content.push_str(&format!("{}:{}\n", key, value));
+            }
+
+            let mut file = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open("passwords.txt")
+                .expect("Failed to open file");
+
+            file.write_all(content.as_bytes()).expect("Failed to write to file!");
+            println!("Password deleted successfully!");
+        },
+        None => println!("Not found!"),
+    }
+}
+
 fn main() {
     let mut input = String::new();
 
-    println!("\n1. Create password\n2. View password\n3. Update password\n4. Delete password");
-    print!("\nEnter your choice: ");
-    io::stdout().flush().expect("Flush failed!");
-    
-    // Reads input string
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input!");
+    loop {
+        println!("\n1. Create password\n2. View password\n3. Update password\n4. Delete password\n5. Exit");
+        print!("\nEnter your choice: ");
+        io::stdout().flush().expect("Flush failed!");
 
-    // Converts the string to a single char
-    let choice = input.trim().chars().next().unwrap();
+        input.clear();
+        
+        // Reads input string
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read input!");
 
-    match choice {
-        '1' => { 
-            let mut label = String::new();
-            print!("Enter a label for the password: ");
-            io::stdout().flush().expect("Flush failed!");
-            io::stdin()
-                .read_line(&mut label)
-                .expect("Failed to read label!");
-            create_password(label.trim().to_string());
+        // Converts the string to a single char
+        let choice = input.trim().chars().next().unwrap();
+
+        match choice {
+            '1' => { 
+                let mut label = String::new();
+                print!("Enter a label for the password: ");
+                io::stdout().flush().expect("Flush failed!");
+                io::stdin()
+                    .read_line(&mut label)
+                    .expect("Failed to read label!");
+                create_password(label.trim().to_string());
+            }
+            '2' => view_password().expect("Failed to view passwords"),
+            '3' => {
+                let mut label = String::new();
+                print!("Enter a label of the password to change: ");
+                io::stdout().flush().expect("Flush failed!");
+                io::stdin()
+                    .read_line(&mut label)
+                    .unwrap();
+
+                update_password(label.trim().to_string());
+            }
+            '4' => delete_password(),
+            '5' => {
+                println!("Exiting...");
+                break;
+            }
+            _ => println!("Invalid choice"),
         }
-        '2' => view_password().expect("Failed to view passwords"),
-        '3' => {
-            let mut label = String::new();
-            print!("Enter a label of the password to change: ");
-            io::stdout().flush().expect("Flush failed!");
-            io::stdin()
-                .read_line(&mut label)
-                .unwrap();
-
-            update_password(label.trim().to_string());
-        }
-        '4' => println!("Password deleted!"),
-        _ => println!("Invalid choice"),
     }
 }
